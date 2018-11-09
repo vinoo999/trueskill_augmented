@@ -38,5 +38,5 @@ and the the original
 
 ## References
 [Shengbo Guo: Bayesian Recommendar Systems](http://users.cecs.anu.edu.au/~sguo/thesis.pdf)  
-[Ralf Herbrich, Tom Minka, Thore Graepel: Trueskill](https://www.microsoft.com/en-us/research/publication/trueskilltm-a-bayesian-skill-rating-system/)
+[Ralf Herbrich, Tom Minka, Thore Graepel: Trueskill](https://www.microsoft.com/en-us/research/publication/trueskilltm-a-bayesian-skill-rating-system/)  
 [Data](https://www.kaggle.com/hugomathien/soccer).
