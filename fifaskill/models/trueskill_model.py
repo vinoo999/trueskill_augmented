@@ -69,6 +69,14 @@ class TrueskillModel(object):
 	    return ts.cdf(delta_mu / denom)
 
 	def predict(self, team1, team2):
-		if 
+		rating1 = self.team_ratings[team1]
+		rating2 = self.team_ratings[team2]
+
+		if rating1.mu - rating2.mu > self.avg_margin:
+			return 1
+		elif rating2.mu - rating1.mu > self.avg_margin:
+			return -1
+		else:
+			return 0 
 
 	
