@@ -12,10 +12,9 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/vinoo999/trueskill_augmented",
-    packages=['fifaskill', 'fifaskill.data_processing', 'fifaskill.examples', 'fifaskill.models'],
+    packages=['fifaskill', 'fifaskill.data_processing', 'fifaskill.examples',
+              'fifaskill.models'],
     classifiers=[
-        "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: MIT License",
-        "Operating System :: OS Independent",
+        "Programming Language :: Python :: 3"
     ],
 )
