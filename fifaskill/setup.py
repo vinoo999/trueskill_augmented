@@ -12,7 +12,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/vinoo999/trueskill_augmented",
-    packages=['fifaskill', 'fifaskill.data_processing', 'fifaskill.examples',
+    packages=['fifaskill', 'fifaskill.data_processing',
               'fifaskill.models'],
     classifiers=[
         "Programming Language :: Python :: 3"

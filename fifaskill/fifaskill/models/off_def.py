@@ -6,7 +6,7 @@ from fifaskill.data_processing import process
 
 
 class Toy(object):
-    def __init__(self, data=None, goal_dif=False):
+    def __init__(self, data=None, goal_dif=False, n_iter=1000):
         if data is None:
             raise ValueError("Data cannot be null")
 
@@ -15,7 +15,7 @@ class Toy(object):
         self.team_num_map = team_num_map
         self.data = goal_differences
 
-        self.train()
+        self.train(n_iter=n_iter)
 
     def train(self, n_iter=1000):
         # Model based on Alek's toy model in Jupyter
@@ -24,21 +24,25 @@ class Toy(object):
         initial_loc = tf.ones((n, 1), dtype='float32') * 25
         initial_scale = tf.ones((n, 1),  dtype='float32') * (25/3)**2
 
-        team_skill = Normal(loc=initial_loc, scale=initial_scale)
+        with tf.name_scope('model'): 
+            team_skill = Normal(loc=initial_loc, scale=initial_scale)
 
-        team_performance = Normal(loc=team_skill, scale=initial_scale)
+            team_performance = Normal(loc=team_skill, scale=initial_scale)
 
-        perf_diff = tf.tile(tf.reduce_sum(team_performance, 1, keepdims=True),
-                            [1, n])
-        perf_diff = perf_diff - tf.transpose(perf_diff)
+            perf_diff = tf.tile(tf.reduce_sum(team_performance, 1, keepdims=True),
+                                [1, n])
+            perf_diff = perf_diff - tf.transpose(perf_diff)
 
-        qz = Normal(loc=tf.get_variable("qz/loc", [n, 1]),
-                    scale=tf.nn.softplus(tf.get_variable("qz/scale", [n, 1])))
+        with tf.name_scope('posterior'):
+            qz = Normal(loc=tf.get_variable("qz/loc", [n, 1]),
+                        scale=tf.nn.softplus(tf.get_variable("qz/scale", [n, 1])))
 
         inference = ed.KLqp({team_skill: qz}, data={perf_diff: self.data*25})
         inference.initialize(optimizer=tf.train.AdamOptimizer
                              (learning_rate=0.001, beta1=0.9, beta2=0.999,
-                              epsilon=1e-08))
+                              epsilon=1e-08),
+                             n_iter=n_iter,
+                             logdir='/tmp/tensorboard_logs')
         tf.global_variables_initializer().run()
 
         self.loss = np.empty(n_iter, dtype=np.float32)
@@ -50,8 +54,8 @@ class Toy(object):
         self._trained = True
 
         sess = ed.get_session()
-
         self.team_skill = sess.run(qz)
+        
         return
 
     def predict(self, team1, team2):
