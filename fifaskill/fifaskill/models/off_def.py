@@ -24,18 +24,20 @@ class Toy(object):
         initial_loc = tf.ones((n, 1), dtype='float32') * 25
         initial_scale = tf.ones((n, 1),  dtype='float32') * (25/3)**2
 
-        with tf.name_scope('model'): 
+        with tf.name_scope('model'):
             team_skill = Normal(loc=initial_loc, scale=initial_scale)
 
             team_performance = Normal(loc=team_skill, scale=initial_scale)
 
-            perf_diff = tf.tile(tf.reduce_sum(team_performance, 1, keepdims=True),
+            perf_diff = tf.tile(tf.reduce_sum(team_performance, 1,
+                                keepdims=True),
                                 [1, n])
             perf_diff = perf_diff - tf.transpose(perf_diff)
 
         with tf.name_scope('posterior'):
             qz = Normal(loc=tf.get_variable("qz/loc", [n, 1]),
-                        scale=tf.nn.softplus(tf.get_variable("qz/scale", [n, 1])))
+                        scale=tf.nn.softplus(tf.get_variable("qz/scale",
+                                                             [n, 1])))
 
         inference = ed.KLqp({team_skill: qz}, data={perf_diff: self.data*25})
         inference.initialize(optimizer=tf.train.AdamOptimizer
@@ -55,7 +57,7 @@ class Toy(object):
 
         sess = ed.get_session()
         self.team_skill = sess.run(qz)
-        
+
         return
 
     def predict(self, team1, team2):

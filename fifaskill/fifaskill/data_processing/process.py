@@ -54,8 +54,8 @@ def team_stats(data, team_num_map=None):
             stats[home, 0] += 1
             stats[away, 1] += 1
         elif dif < 0:
-            stats[home, 0] += 1
-            stats[away, 1] += 1
+            stats[home, 1] += 1
+            stats[away, 0] += 1
         else:
             stats[home, 2] += 1
             stats[away, 2] += 1
@@ -100,5 +100,20 @@ def partition_data(data, ratio=0.1):
 def rankings(data):
     stats, team_num_map = team_stats(data)
 
+    # inverse map the team map for indices
+    team_num_map = {v: k for k, v in team_num_map.items()}
+
     points = 3*stats[:, 0] + 1*stats[:, 2]
-    return points, team_num_map
+
+    indices = np.arange(len(team_num_map.keys()))
+    data_dict = {'points': pd.Series(points, index=[team_num_map[x] 
+                                                    for x in indices]),
+                 'goal_dif': pd.Series(stats[:, 3], index=[team_num_map[x]
+                                                    for x in indices])
+                 }
+    points_table = pd.DataFrame(data_dict)
+
+    points_table = points_table.sort_values(by=['points', 'goal_dif'],
+                                            ascending=False)
+
+    return points_table
