@@ -117,3 +117,17 @@ def rankings(data):
                                             ascending=False)
 
     return points_table
+
+def rankings_from_skills(team_skills, team_num_map, skill_names=['skill']):
+    # inverse map the team map for indices
+    team_num_map = {v: k for k, v in team_num_map.items()}
+    indices = np.arange(len(team_num_map.keys()))
+
+    # to be modified to take in multiple skill names
+    data_dict = {'skill': pd.Series(team_skills, index=[team_num_map[x] 
+                                                    for x in indices])
+                 }
+    skills_table = pd.DataFrame(data_dict)
+    skills_table = skills_table.sort_values(by=['skill'],
+                                            ascending=False)
+    return skills_table
