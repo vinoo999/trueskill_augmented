@@ -51,7 +51,7 @@ def match_vectors(data, goals=False, loc=False, seperate=False):
         matches = np.zeros((data.shape[0], num_teams, 2))
     else:
         matches = np.zeros((data.shape[0], num_teams))
-        
+
     if goals:
         results = np.zeros((data.shape[0], 2))
     else:
@@ -202,9 +202,8 @@ def gen_records(data, match_predictions):
     for i, row in data.iterrows():
         home = team_num_map[row.home_team]
         away = team_num_map[row.away_team]
-        
+
         res = match_predictions[i]
-        
 
         if res > 0:
             stats[home, 0] += 1
@@ -222,17 +221,12 @@ def gen_records(data, match_predictions):
     team_num_map = {v: k for k, v in team_num_map.items()}
     indices = np.arange(len(team_num_map.keys()))
 
-    data_dict = {'points': pd.Series(points, index=[team_num_map[x] 
+    data_dict = {'points': pd.Series(points, index=[team_num_map[x]
                                                     for x in indices])}
     return pd.DataFrame(data_dict).sort_values(by=['points'])
 
 
 def accuracy(data, match_predictions):
-    homes = pd.unique(data.home_team)
-    aways = pd.unique(data.away_team)
-    teams = np.union1d(homes, aways)
-    num_teams = np.size(teams)
-
     correct = 0.0
     incorrect = 0.0
 
