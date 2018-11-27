@@ -1,7 +1,7 @@
 import numpy as np
 import edward as ed
 import tensorflow as tf
-from edward.models import Normal, PointMass, Poisson, Gamma, Empirical
+from edward.models import Normal, PointMass, Poisson
 from fifaskill.data_processing import process
 
 
@@ -11,7 +11,8 @@ class Toy(object):
             raise ValueError("Data cannot be null")
 
         self._trained = False
-        matchups, draws, goal_scored, team_num_map = process.win_loss_matrix(data, goal_scored=True)
+        matchups, draws, goal_scored, team_num_map = \
+            process.win_loss_matrix(data, goal_scored=True)
         self.total_matches = np.abs(matchups) + draws
         self.team_num_map = team_num_map
         self.data = goal_scored
@@ -22,8 +23,8 @@ class Toy(object):
         n = len(self.team_num_map.keys())
 
         initial_loc = tf.ones((n, 1), dtype='float32')*np.log(3)
-        initial_scale = tf.ones((n, 1),  dtype='float32')*0.1
-        initial_scale2 =  initial_scale / 5
+        initial_scale = tf.ones((n, 1), dtype='float32')*0.1
+        initial_scale2 = initial_scale / 5
 
         with tf.name_scope('model'):
             offense = Normal(loc=initial_loc, scale=initial_scale)
@@ -33,13 +34,11 @@ class Toy(object):
             defensive_performance = Normal(loc=defense, scale=initial_scale2)
 
             off_perf_cum = tf.tile(tf.reduce_sum(offensive_performance, 1,
-                                keepdims=True),
-                                [1, n])
+                                                 keepdims=True), [1, n])
             def_perf_cum = tf.tile(tf.reduce_sum(defensive_performance, 1,
-                                keepdims=True),
-                                [1, n])
+                                                 keepdims=True), [1, n])
 
-            total_matches = tf.placeholder(tf.float32, [n,n])
+            total_matches = tf.placeholder(tf.float32, [n, n])
 
             model_skill_diff = off_perf_cum - tf.transpose(def_perf_cum)
 
@@ -51,10 +50,13 @@ class Toy(object):
             # qz = Normal(loc=tf.get_variable("qz/loc", [n, 1]),
             #             scale=tf.nn.softplus(tf.get_variable("qz/scale",
             #                                                  [n, 1])))
-            # qz = PointMass(tf.nn.softplus(tf.Variable(tf.random_normal([n,1], mean=2, stddev=1))))
-            qo = PointMass(tf.nn.softplus(tf.Variable(tf.random_normal([n,1], mean=1, stddev=0.2))))
-            qd = PointMass(tf.nn.softplus(tf.Variable(tf.random_normal([n,1], mean=1, stddev=0.2))))
-            
+            # qz = PointMass(tf.nn.softplus(tf.Variable(tf.random_normal([n,1],
+            #                                           mean=2, stddev=1))))
+            qo = PointMass(tf.nn.softplus(tf.Variable(tf.random_normal([n, 1],
+                                                      mean=1, stddev=0.2))))
+            qd = PointMass(tf.nn.softplus(tf.Variable(tf.random_normal([n, 1],
+                                                      mean=1, stddev=0.2))))
+
             # qo = Normal(loc=tf.get_variable("qo/loc", [n, 1]),
             #             scale=tf.nn.softplus(tf.get_variable("qo/scale",
             #                                                  [n, 1])))
@@ -65,9 +67,15 @@ class Toy(object):
             # qz = Empirical(params=tf.Variable(tf.zeros([n_iter, n, 1])))
 
         # inference = ed.HMC({team_skill: qz}, data={perf_diff: self.data})
-        # inference = ed.KLqp({offense: qo, defense: qd}, data={self.goal_scored_cum: self.data, total_matches: self.total_matches})
-        inference = ed.MAP({offense: qo, defense: qd}, data={self.goal_scored_cum: self.data, total_matches: self.total_matches})
-        # inference = ed.KLqp({offense: self.qo, defense: self.qd}, data={goal_scored_cum: self.data, total_matches: self.total_matches})
+        # inference = ed.KLqp({offense: qo, defense: qd}, data=
+        #                     {self.goal_scored_cum: self.data,
+        #                      total_matches: self.total_matches})
+        inference = ed.MAP({offense: qo, defense: qd}, data={
+                            self.goal_scored_dif: self.data,
+                            total_matches: self.total_matches})
+        # inference = ed.KLqp({offense: self.qo, defense: self.qd}, data=
+        #                     {goal_scored_cum: self.data,
+        #                      total_matches: self.total_matches})
 
         # inference.initialize(n_iter=n_iter)
         inference.initialize(optimizer=tf.train.AdamOptimizer
@@ -88,7 +96,10 @@ class Toy(object):
         self.sess = ed.get_session()
         self.team_skill = self.sess.run([qo, qd])
         # self.team_skill = (offense, defense)
-        # self.tmp = self.sess.run(goal_scored_cum, feed_dict={offense: self.team_skill[0], defense: self.team_skill[1], total_matches: self.total_matches})
+        # self.tmp = self.sess.run(goal_scored_cum,
+        # feed_dict={offense: self.team_skill[0],
+        #            defense: self.team_skill[1],
+        #            total_matches: self.total_matches})
 
         return
 
@@ -98,7 +109,8 @@ class Toy(object):
             away = self.team_num_map[team2]
             off_skills = self.team_skill[0]
             def_skills = self.team_skill[1]
-            if off_skills[home] - def_skills[away] > off_skills[away] - def_skills[home]:
+            if off_skills[home] - def_skills[away] > \
+                    off_skills[away] - def_skills[home]:
                 return 1
             else:
                 return -1

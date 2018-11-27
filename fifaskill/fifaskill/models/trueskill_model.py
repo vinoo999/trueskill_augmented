@@ -4,6 +4,7 @@ import itertools
 import math
 import numpy as np
 import pandas as pd
+from fifaskill.data_processing import process
 
 
 class TrueskillModel(object):
@@ -12,6 +13,10 @@ class TrueskillModel(object):
             raise ValueError("Data cannot be null")
 
         self._trained = False
+
+        _, _, team_num_map = process.match_vectors(match_data)
+
+        self.team_num_map = team_num_map
 
         homes = pd.unique(match_data.home_team)
         aways = pd.unique(match_data.away_team)
@@ -26,6 +31,11 @@ class TrueskillModel(object):
         trueskill.setup(mu=25.0, sigma=8.333333333333334, beta=4.1666666666666,
                         tau=0.08333333333333334, draw_probability=0.26)
         self.train(match_data, score_weighting)
+
+        self.team_skills = np.zeros((len(teams),))
+        for team in teams:
+            self.team_skills[self.team_num_map[team]] = \
+                             self.team_ratings[team].mu
         return
 
     def train(self, data, score_weighting=False):

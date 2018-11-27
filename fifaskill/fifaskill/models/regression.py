@@ -203,7 +203,7 @@ class LogLinear(object):
 
         with tf.name_scope('posterior'):
             self.qw1 = Normal(loc=tf.get_variable("qw1_ll/loc", [D]),
-                              scale=tf.nn.softplus(tf.get_variable 
+                              scale=tf.nn.softplus(tf.get_variable
                                                    ("qw1_ll/scale",
                                                     [D])))
             # self.qb1 = Normal(loc=tf.get_variable("qb1/loc", [1]),
@@ -312,7 +312,7 @@ class LogLinearOffDef(object):
                                                    ("qb1_llod/scale",
                                                     [1])))
             self.qw2 = Normal(loc=tf.get_variable("qw2_llod/loc", [D]),
-                              scale=tf.nn.softplus(tf.get_variable  
+                              scale=tf.nn.softplus(tf.get_variable
                                                    ("qw2_llod/scale",
                                                     [D])))
             self.qb2 = Normal(loc=tf.get_variable("qb2_llod/loc", [1]),

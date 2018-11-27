@@ -1,7 +1,7 @@
 import numpy as np
 import edward as ed
 import tensorflow as tf
-from edward.models import Normal, PointMass, Poisson, Gamma, Empirical
+from edward.models import Normal, PointMass, Poisson
 from fifaskill.data_processing import process
 
 
@@ -11,7 +11,8 @@ class Basic(object):
             raise ValueError("Data cannot be null")
 
         self._trained = False
-        matchups, draws, goal_differences, team_num_map = process.win_loss_matrix(data)
+        matchups, draws, goal_differences, team_num_map = \
+            process.win_loss_matrix(data)
         self.total_matches = np.abs(matchups) + draws
         self.team_num_map = team_num_map
         self.data = goal_differences / (self.total_matches + 1.0)
@@ -34,15 +35,18 @@ class Basic(object):
             # team_performance = Normal(loc=team_skill, scale=initial_scale2)
 
             perf_diff_tmp = tf.tile(tf.reduce_sum(team_performance, 1,
-                                keepdims=True),
-                                [1, n])
-            perf_diff = tf.multiply((perf_diff_tmp - tf.transpose(perf_diff_tmp)), (1 / (self.total_matches+1.0)))
+                                    keepdims=True),
+                                    [1, n])
+            perf_diff = tf.multiply((perf_diff_tmp -
+                                     tf.transpose(perf_diff_tmp)),
+                                    (1 / (self.total_matches+1.0)))
 
         with tf.name_scope('posterior'):
             # qz = Normal(loc=tf.get_variable("qz/loc", [n, 1]),
             #             scale=tf.nn.softplus(tf.get_variable("qz/scale",
             #                                                  [n, 1])))
-            qz = PointMass(tf.nn.softplus(tf.Variable(tf.random_normal([n,1], mean=0, stddev=1))))
+            qz = PointMass(tf.nn.softplus(tf.Variable(tf.random_normal(
+                                            [n, 1], mean=0, stddev=1))))
             # qz = Empirical(params=tf.Variable(tf.zeros([n_iter, n, 1])))
 
         inference = ed.MAP({team_skill: qz}, data={perf_diff: self.data})
