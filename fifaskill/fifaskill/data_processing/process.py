@@ -193,7 +193,7 @@ def gen_records(data, match_predictions):
 
     stats = np.zeros((num_teams, 3))  # win loss draw dif
 
-    for i, row in data.itertuples():
+    for row in data.itertuples():
         home = team_num_map[row.home_team]
         away = team_num_map[row.away_team]
         
