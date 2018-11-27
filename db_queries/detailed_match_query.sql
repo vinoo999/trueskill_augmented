@@ -13,6 +13,6 @@ JOIN Country on Country.id = Match.country_id
 JOIN League on League.id = Match.league_id
 LEFT JOIN Team AS HT on HT.team_api_id = Match.home_team_api_id
 LEFT JOIN Team AS AT on AT.team_api_id = Match.away_team_api_id
-where country_name = 'England' and season = '2008/2009'
+where country_name = 'England'
 ORDER by date
 ;

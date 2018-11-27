@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 
-def win_loss_matrix(data):
+def win_loss_matrix(data, goal_scored=False):
     homes = pd.unique(data.home_team)
     aways = pd.unique(data.away_team)
     teams = np.union1d(homes, aways)
@@ -18,8 +18,12 @@ def win_loss_matrix(data):
         away = team_num_map[row.away_team]
 
         dif = row.home_team_goal - row.away_team_goal
-        goal_differences[home, away] += dif
-        goal_differences[away, home] -= dif
+        if goal_scored:
+            goal_differences[home,away] += row.home_team_goal
+            goal_differences[away, home] += row.away_team_goal
+        else:
+            goal_differences[home, away] += dif
+            goal_differences[away, home] -= dif
 
         if dif > 0:
             matchups[home, away] += 1
@@ -33,6 +37,24 @@ def win_loss_matrix(data):
 
     return matchups, draws, goal_differences, team_num_map
 
+
+def match_vectors(data):
+    homes = pd.unique(data.home_team)
+    aways = pd.unique(data.away_team)
+    teams = np.union1d(homes, aways)
+    num_teams = np.size(teams)
+    team_num_map = dict(zip(teams, range(num_teams)))
+
+    matches = np.zeros((data.shape[0], num_teams))
+    results = np.zeros((data.shape[0],))
+    for i, row in data.iterrows():
+        home = team_num_map[row.home_team]
+        away = team_num_map[row.away_team]
+        matches[i,home] = 1
+        matches[i,away] = -1
+        results[i] = row.home_team_goal - row.away_team_goal
+    
+    return matches, results, team_num_map
 
 def team_stats(data, team_num_map=None):
     homes = pd.unique(data.home_team)
