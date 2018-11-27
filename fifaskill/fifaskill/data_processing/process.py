@@ -38,21 +38,37 @@ def win_loss_matrix(data, goal_scored=False):
     return matchups, draws, goal_differences, team_num_map
 
 
-def match_vectors(data):
+def match_vectors(data, goals=False, loc=False):
     homes = pd.unique(data.home_team)
     aways = pd.unique(data.away_team)
     teams = np.union1d(homes, aways)
     num_teams = np.size(teams)
     team_num_map = dict(zip(teams, range(num_teams)))
 
-    matches = np.zeros((data.shape[0], num_teams))
-    results = np.zeros((data.shape[0],))
+    if loc:
+        matches = np.zeros((2*data.shape[0], num_teams))
+    else:
+        matches = np.zeros((data.shape[0], num_teams))
+    if goals:
+        results = np.zeros((data.shape[0],2))
+    else:
+        results = np.zeros((data.shape[0],))
+
     for i, row in data.iterrows():
         home = team_num_map[row.home_team]
         away = team_num_map[row.away_team]
-        matches[i,home] = 1
-        matches[i,away] = -1
-        results[i] = row.home_team_goal - row.away_team_goal
+        if loc:
+            matches[i,home] = 1
+            matches[i,num_teams+away] = 1
+        else:
+            matches[i,home] = 1
+            matches[i,away] = -1
+        
+        if goals:
+            results[i,0] = row.home_team_goal
+            results[i,1] = row.away_team_goal
+        else:
+            results[i] = row.home_team_goal - row.away_team_goal
     
     return matches, results, team_num_map
 
@@ -113,8 +129,12 @@ def data_stats(data):
     return num_matches, num_home_wins, num_away_wins, num_draws, num_teams
 
 
-def partition_data(data, ratio=0.1):
-    train = data.shuffle()
+def partition_data(data, ratio=0.1, by_season=False):
+    # if by season return training of all seasons except last
+    
+    if by_season:
+        pass
+    train = 1
     test = train
     return train, test
 

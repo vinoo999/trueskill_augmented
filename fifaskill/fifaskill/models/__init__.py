@@ -1,1 +1,1 @@
-__all__ = ["off_def", "player_factor", "trueskill_model", "separated", "trueskill_edward"]
+__all__ = ["off_def", "regression", "trueskill_model", "separated", "trueskill_edward"]
