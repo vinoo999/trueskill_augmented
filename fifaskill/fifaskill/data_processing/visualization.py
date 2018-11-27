@@ -11,7 +11,7 @@ def plot_loss(*models):
     plt.show()
 
 
-def plot_ppcs(*models):
+def plot_ppcs(*models, log_plot=False):
 
     for i in range(len(models)):
         plt.figure()
@@ -29,6 +29,11 @@ def plot_ppcs(*models):
             axes[2].axvline(np.mean(model.ys[:, 1]), color='red')
             axes[3].hist(model.ys[:, 1], color='red')
             axes[3].axvline(np.mean(model.ys[:, 1]), color='red')
+            if log_plot:
+                axes[3].set_xscale('log')
+                axes[2].set_xscale('log')
+                axes[1].set_xscale('log')
+                axes[0].set_xscale('log')
 
         else:
             _, axes = plt.subplots(2, 1, sharex=True)
@@ -36,5 +41,8 @@ def plot_ppcs(*models):
             axes[0].axvline(np.mean(model.ys), color='red')
             axes[1].hist(model.ys, color='red')
             axes[1].axvline(np.mean(model.ys), color='red')
+            if log_plot:
+                axes[1].set_xscale('log')
+                axes[0].set_xscale('log')
 
         plt.show()

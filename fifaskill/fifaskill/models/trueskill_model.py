@@ -109,3 +109,31 @@ class TrueskillModel(object):
             outputs.append(self.predict(matchup[0], matchup[1]))
 
         return outputs
+
+    def sample(self, team1, team2):
+        rating1 = self.team_ratings[team1]
+        rating2 = self.team_ratings[team2]
+
+        performance1 = np.random.normal(loc=rating1.mu, scale=rating1.sigma)
+        performance2 = np.random.normal(loc=rating2.mu, scale=rating2.sigma)
+
+        if performance1 - performance2 > self.avg_margin:
+            return 1
+        elif performance2 - performance1 > self.avg_margin:
+            return -1
+        else:
+            return 0
+
+        return 
+
+    def simulate(self, data, num_simulations = 5, prior_loc=0, prior_scale=1):
+        results = []
+        for row in data.itertuples():
+            sims = np.zeros(3)
+            for i in range(num_simulations):
+                res = self.sample(row.home_team, row.away_team)
+                sims[res+1] += 1
+            
+            results.append(np.argmax(sims)-1)
+            
+        return results

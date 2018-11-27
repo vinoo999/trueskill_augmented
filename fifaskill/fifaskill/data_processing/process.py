@@ -219,3 +219,25 @@ def gen_records(data, match_predictions):
     data_dict = {'points': pd.Series(points, index=[team_num_map[x] 
                                                     for x in indices])}
     return pd.DataFrame(data_dict).sort_values(by=['points'])
+
+
+def accuracy(data, match_predictions):
+    homes = pd.unique(data.home_team)
+    aways = pd.unique(data.away_team)
+    teams = np.union1d(homes, aways)
+    num_teams = np.size(teams)
+
+    correct = 0.0
+    incorrect = 0.0
+
+    for i, row in data.iterrows():
+        res = match_predictions[i]
+        dif = row.home_team_goal - row.away_team_goal
+
+        if (res > 0 and dif > 0) or (res == 0 and dif == 0) or \
+                (res < 0 and dif < 0):
+            correct += 1.0
+        else:
+            incorrect += 1.0
+
+    return correct / (correct + incorrect)

@@ -1,2 +1,1 @@
-__all__ = ["off_def", "regression", "trueskill_model", "basic",
-           "trueskill_edward"]
+__all__ = ["regression", "trueskill_model"]
