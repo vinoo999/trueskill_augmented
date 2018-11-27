@@ -38,7 +38,7 @@ def win_loss_matrix(data, goal_scored=False):
     return matchups, draws, goal_differences, team_num_map
 
 
-def match_vectors(data, goals=False, loc=False):
+def match_vectors(data, goals=False, loc=False, seperate=False):
     homes = pd.unique(data.home_team)
     aways = pd.unique(data.away_team)
     teams = np.union1d(homes, aways)
@@ -47,8 +47,11 @@ def match_vectors(data, goals=False, loc=False):
 
     if loc:
         matches = np.zeros((2*data.shape[0], num_teams))
+    elif seperate:
+        matches = np.zeros((data.shape[0], num_teams, 2))
     else:
         matches = np.zeros((data.shape[0], num_teams))
+        
     if goals:
         results = np.zeros((data.shape[0], 2))
     else:
@@ -60,6 +63,9 @@ def match_vectors(data, goals=False, loc=False):
         if loc:
             matches[i, home] = 1
             matches[i, num_teams + away] = 1
+        elif seperate:
+            matches[i, home, 0] = 1
+            matches[i, away, 1] = 1
         else:
             matches[i, home] = 1
             matches[i, away] = -1

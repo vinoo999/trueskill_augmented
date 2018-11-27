@@ -372,24 +372,25 @@ class LogLinearOffDef(object):
             raise ValueError("Data cannot be null")
 
         self._trained = False
-        matches, results, team_num_map = process.match_vectors(data,
-                                                               goals=True)
-        self.xs = matches
+        matches, results, team_num_map = process.match_vectors(data,goals=True,seperate=True)
+        self.xs1 = matches[:,:,0]
+        self.xs2 = matches[:,:,1]
         self.ys = results
         self.team_num_map = team_num_map
         self.train(n_iter=n_iter)
 
     def train(self, n_iter=1000):
         D = len(self.team_num_map.keys())
-        N = self.xs.shape[0]
+        N = self.xs1.shape[0]
         with tf.name_scope('model'):
-            self.X = tf.placeholder(tf.float32, [N, D])
+            self.X1 = tf.placeholder(tf.float32, [N, D])
+            self.X2 = tf.placeholder(tf.float32, [N, D])
             self.w1 = Normal(loc=tf.zeros(D), scale=tf.ones(D))
             self.b1 = Normal(loc=tf.zeros(1), scale=tf.ones(1))
-            self.y1 = Poisson(rate=tf.exp(ed.dot(self.X, self.w1) + self.b1))
             self.w2 = Normal(loc=tf.zeros(D), scale=tf.ones(D))
             self.b2 = Normal(loc=tf.zeros(1), scale=tf.ones(1))
-            self.y2 = Poisson(rate=tf.exp(ed.dot(self.X, self.w2) + self.b2))
+            self.y1 = Poisson(rate=tf.exp((ed.dot(self.X1, self.w1) + self.b1 - ed.dot(self.X2, self.w2) - self.b2)))
+            self.y2 = Poisson(rate=tf.exp((ed.dot(self.X2, self.w2) + self.b2 - ed.dot(self.X1, self.w1) - self.b1)))
 
         with tf.name_scope('posterior'):
             self.qw1 = Normal(loc=tf.get_variable("qw1_llod/loc", [D]),
@@ -413,7 +414,8 @@ class LogLinearOffDef(object):
                                                self.b1: self.qb1,
                                                self.w2: self.qw2,
                                                self.b2: self.qb2},
-                                              data={self.X: self.xs,
+                                              data={self.X1: self.xs1,
+                                                    self.X2: self.xs2,
                                                     self.y1: self.ys[:, 0],
                                                     self.y2: self.ys[:, 1]})
         inference.initialize(optimizer=tf.train.AdamOptimizer
@@ -449,8 +451,8 @@ class LogLinearOffDef(object):
             home = self.team_num_map[team1]
             away = self.team_num_map[team2]
 
-            home_skill = self.team_skill[0][home] + self.team_skill[1][away]
-            away_skill = self.team_skill[1][home] + self.team_skill[0][away]
+            home_skill = self.team_skill[0][home] - self.team_skill[1][away]
+            away_skill = self.team_skill[1][home] - self.team_skill[0][away]
 
             home_goals = np.random.poisson(lam=np.exp(home_skill))
             away_goals = np.random.poisson(lam=np.exp(away_skill))
@@ -539,8 +541,8 @@ class LogLinearOffDef(object):
                     away_def_scale = np.sqrt(-self.perf_var[1][away])
                     away_def = np.random.normal(away_def_mu, away_def_scale)
 
-                home_skill = home_off + away_def
-                away_skill = away_off + home_def
+                home_skill = home_off - away_def
+                away_skill = away_off - home_def
 
                 home_goals = np.random.poisson(lam=np.exp(home_skill))
                 away_goals = np.random.poisson(lam=np.exp(away_skill))
@@ -554,3 +556,4 @@ class LogLinearOffDef(object):
             full_simulation += np.array(prediction) / num_simulations
 
         return full_simulation
+
