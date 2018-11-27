@@ -182,3 +182,40 @@ def rankings_from_skills(team_skills, team_num_map, skill_names=['skill']):
     skills_table = skills_table.sort_values(by=['skill'],
                                             ascending=False)
     return skills_table
+
+
+def gen_records(data, match_predictions):
+    homes = pd.unique(data.home_team)
+    aways = pd.unique(data.away_team)
+    teams = np.union1d(homes, aways)
+    num_teams = np.size(teams)
+    team_num_map = dict(zip(teams, range(num_teams)))
+
+    stats = np.zeros((num_teams, 3))  # win loss draw dif
+
+    for i, row in data.itertuples():
+        home = team_num_map[row.home_team]
+        away = team_num_map[row.away_team]
+        
+        res = match_predictions[i]
+        
+
+        if res > 0:
+            stats[home, 0] += 1
+            stats[away, 1] += 1
+        elif res < 0:
+            stats[home, 1] += 1
+            stats[away, 0] += 1
+        else:
+            stats[home, 2] += 1
+            stats[away, 2] += 1
+
+    points = 3*stats[:, 0] + 1*stats[:, 2]
+
+    # inverse map the team map for indices
+    team_num_map = {v: k for k, v in team_num_map.items()}
+    indices = np.arange(len(team_num_map.keys()))
+
+    data_dict = {'points': pd.Series(points, index=[team_num_map[x] 
+                                                    for x in indices])}
+    return pd.DataFrame(data_dict).sort_values(by=['points'])
