@@ -133,9 +133,14 @@ def partition_data(data, ratio=0.1, by_season=False):
     # if by season return training of all seasons except last
     
     if by_season:
-        pass
-    train = 1
-    test = train
+        sorted_data = data.sort_values(by=['season'])
+        test = sorted_data.loc[sorted_data['season'] == sorted_data.tail(1)['season'].values[0]]
+        train = sorted_data.loc[sorted_data['season'] != sorted_data.tail(1)['season'].values[0]]
+    else:
+        random_data = data.loc[np.random.permutation(data.index)]
+        train = random_data[ratio*random_data.shape[0]:]
+        test = random_data[0:ratio*random_data.shape[0]]
+
     return train, test
 
 
