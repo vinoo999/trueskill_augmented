@@ -19,7 +19,7 @@ def win_loss_matrix(data, goal_scored=False):
 
         dif = row.home_team_goal - row.away_team_goal
         if goal_scored:
-            goal_differences[home,away] += row.home_team_goal
+            goal_differences[home, away] += row.home_team_goal
             goal_differences[away, home] += row.away_team_goal
         else:
             goal_differences[home, away] += dif
@@ -50,7 +50,7 @@ def match_vectors(data, goals=False, loc=False):
     else:
         matches = np.zeros((data.shape[0], num_teams))
     if goals:
-        results = np.zeros((data.shape[0],2))
+        results = np.zeros((data.shape[0], 2))
     else:
         results = np.zeros((data.shape[0],))
 
@@ -58,19 +58,20 @@ def match_vectors(data, goals=False, loc=False):
         home = team_num_map[row.home_team]
         away = team_num_map[row.away_team]
         if loc:
-            matches[i,home] = 1
-            matches[i,num_teams+away] = 1
+            matches[i, home] = 1
+            matches[i, num_teams + away] = 1
         else:
-            matches[i,home] = 1
-            matches[i,away] = -1
-        
+            matches[i, home] = 1
+            matches[i, away] = -1
+
         if goals:
-            results[i,0] = row.home_team_goal
-            results[i,1] = row.away_team_goal
+            results[i, 0] = row.home_team_goal
+            results[i, 1] = row.away_team_goal
         else:
             results[i] = row.home_team_goal - row.away_team_goal
-    
+
     return matches, results, team_num_map
+
 
 def team_stats(data, team_num_map=None):
     homes = pd.unique(data.home_team)
@@ -131,11 +132,13 @@ def data_stats(data):
 
 def partition_data(data, ratio=0.1, by_season=False):
     # if by season return training of all seasons except last
-    
+
     if by_season:
         sorted_data = data.sort_values(by=['season'])
-        test = sorted_data.loc[sorted_data['season'] == sorted_data.tail(1)['season'].values[0]]
-        train = sorted_data.loc[sorted_data['season'] != sorted_data.tail(1)['season'].values[0]]
+        test = sorted_data.loc[sorted_data['season'] == sorted_data.tail(1)
+                               ['season'].values[0]]
+        train = sorted_data.loc[sorted_data['season'] != sorted_data.tail(1)
+                                ['season'].values[0]]
     else:
         random_data = data.loc[np.random.permutation(data.index)]
         train = random_data[ratio*random_data.shape[0]:]
@@ -153,10 +156,10 @@ def rankings(data):
     points = 3*stats[:, 0] + 1*stats[:, 2]
 
     indices = np.arange(len(team_num_map.keys()))
-    data_dict = {'points': pd.Series(points, index=[team_num_map[x] 
+    data_dict = {'points': pd.Series(points, index=[team_num_map[x]
                                                     for x in indices]),
                  'goal_dif': pd.Series(stats[:, 3], index=[team_num_map[x]
-                                                    for x in indices])
+                                                           for x in indices])
                  }
     points_table = pd.DataFrame(data_dict)
 
@@ -165,14 +168,15 @@ def rankings(data):
 
     return points_table
 
+
 def rankings_from_skills(team_skills, team_num_map, skill_names=['skill']):
     # inverse map the team map for indices
     team_num_map = {v: k for k, v in team_num_map.items()}
     indices = np.arange(len(team_num_map.keys()))
 
     # to be modified to take in multiple skill names
-    data_dict = {'skill': pd.Series(team_skills, index=[team_num_map[x] 
-                                                    for x in indices])
+    data_dict = {'skill': pd.Series(team_skills, index=[team_num_map[x]
+                                                        for x in indices])
                  }
     skills_table = pd.DataFrame(data_dict)
     skills_table = skills_table.sort_values(by=['skill'],
