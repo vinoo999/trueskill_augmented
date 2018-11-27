@@ -113,7 +113,7 @@ class TrueSkillRegressor(object):
         N = self.xs.shape[0]
         with tf.name_scope('model'):
             self.X = tf.placeholder(tf.float32, [N, D])
-            self.w = Normal(loc=tf.ones(D) * 25, scale=tf.ones(D * (25 / 3)))
+            self.w = Normal(loc=tf.ones(D) * 25, scale=tf.ones(D) * (25 / 3))
             self.y = Normal(loc=ed.dot(self.X, self.w), scale=tf.ones(N))
 
         with tf.name_scope('posterior'):
@@ -188,7 +188,7 @@ class LogLinear(object):
         self._trained = False
         matches, results, team_num_map = process.match_vectors(data)
         self.xs = matches
-        self.ys = results
+        self.ys = np.exp(results)
         self.team_num_map = team_num_map
         self.train(n_iter=n_iter)
 
@@ -202,9 +202,10 @@ class LogLinear(object):
             self.y1 = Poisson(rate=tf.exp(ed.dot(self.X, self.w1)))
 
         with tf.name_scope('posterior'):
-            self.qw1 = Normal(loc=tf.get_variable("qw1/loc", [D]),
-                              scale=tf.nn.softplus(tf.get_variable("qw1/scale",
-                                                                   [D])))
+            self.qw1 = Normal(loc=tf.get_variable("qw1_ll/loc", [D]),
+                              scale=tf.nn.softplus(tf.get_variable 
+                                                   ("qw1_ll/scale",
+                                                    [D])))
             # self.qb1 = Normal(loc=tf.get_variable("qb1/loc", [1]),
             #                  scale=tf.nn.softplus(tf.get_variable("qb1/scale",
             #                                                        [1])))
@@ -227,8 +228,8 @@ class LogLinear(object):
         self._trained = True
 
         graph = tf.get_default_graph()
-        self.team_skill = graph.get_tensor_by_name("qw1/loc:0").eval()
-        self.perf_variance = graph.get_tensor_by_name("qw1/scale:0").eval()
+        self.team_skill = graph.get_tensor_by_name("qw1_ll/loc:0").eval()
+        self.perf_variance = graph.get_tensor_by_name("qw1_ll/scale:0").eval()
         # self.bias = (graph.get_tensor_by_name("qb1/loc:0").eval(),
         #              graph.get_tensor_by_name("qb2/loc:0").eval())
 
@@ -302,18 +303,22 @@ class LogLinearOffDef(object):
             self.y2 = Poisson(rate=tf.exp(ed.dot(self.X, self.w2) + self.b2))
 
         with tf.name_scope('posterior'):
-            self.qw1 = Normal(loc=tf.get_variable("qw1/loc", [D]),
-                              scale=tf.nn.softplus(tf.get_variable("qw1/scale",
-                                                                   [D])))
-            self.qb1 = Normal(loc=tf.get_variable("qb1/loc", [1]),
-                              scale=tf.nn.softplus(tf.get_variable("qb1/scale",
-                                                                   [1])))
-            self.qw2 = Normal(loc=tf.get_variable("qw2/loc", [D]),
-                              scale=tf.nn.softplus(tf.get_variable("qw2/scale",
-                                                                   [D])))
-            self.qb2 = Normal(loc=tf.get_variable("qb2/loc", [1]),
-                              scale=tf.nn.softplus(tf.get_variable("qb2/scale",
-                                                                   [1])))
+            self.qw1 = Normal(loc=tf.get_variable("qw1_llod/loc", [D]),
+                              scale=tf.nn.softplus(tf.get_variable
+                                                   ("qw1_llod/scale",
+                                                    [D])))
+            self.qb1 = Normal(loc=tf.get_variable("qb1_llod/loc", [1]),
+                              scale=tf.nn.softplus(tf.get_variable
+                                                   ("qb1_llod/scale",
+                                                    [1])))
+            self.qw2 = Normal(loc=tf.get_variable("qw2_llod/loc", [D]),
+                              scale=tf.nn.softplus(tf.get_variable  
+                                                   ("qw2_llod/scale",
+                                                    [D])))
+            self.qb2 = Normal(loc=tf.get_variable("qb2_llod/loc", [1]),
+                              scale=tf.nn.softplus(tf.get_variable
+                                                   ("qb2_llod/scale",
+                                                    [1])))
 
         inference = ed.ReparameterizationKLqp({self.w1: self.qw1,
                                                self.b1: self.qb1,
@@ -337,10 +342,10 @@ class LogLinearOffDef(object):
         self._trained = True
 
         graph = tf.get_default_graph()
-        self.team_skill = (graph.get_tensor_by_name("qw1/loc:0").eval(),
-                           graph.get_tensor_by_name("qw2/loc:0").eval())
-        self.bias = (graph.get_tensor_by_name("qb1/loc:0").eval(),
-                     graph.get_tensor_by_name("qb2/loc:0").eval())
+        self.team_skill = (graph.get_tensor_by_name("qw1_llod/loc:0").eval(),
+                           graph.get_tensor_by_name("qw2_llod/loc:0").eval())
+        self.bias = (graph.get_tensor_by_name("qb1_llod/loc:0").eval(),
+                     graph.get_tensor_by_name("qb2_llod/loc:0").eval())
 
         self.y_post = (ed.copy(self.y1, {self.w1: self.qw1,
                                          self.b1: self.qb1}),

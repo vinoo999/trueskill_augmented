@@ -24,7 +24,7 @@ class TrueskillModel(object):
         self.avg_margin = 0
         self.num_draws = 0
         trueskill.setup(mu=25.0, sigma=8.333333333333334, beta=4.1666666666666,
-                        tau=0.08333333333333334, draw_probability=0.1)
+                        tau=0.08333333333333334, draw_probability=0.26)
         self.train(match_data, score_weighting)
         return
 
