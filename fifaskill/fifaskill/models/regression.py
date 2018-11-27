@@ -282,8 +282,8 @@ class LogLinear(object):
             home = self.team_num_map[team1]
             away = self.team_num_map[team2]
 
-            home_skill = self.team_skill[0][home] + self.team_skill[1][away]
-            away_skill = self.team_skill[1][home] + self.team_skill[0][away]
+            home_skill = self.team_skill[home]
+            away_skill = self.team_skill[away]
 
             home_goals = np.random.poisson(lam=np.exp(home_skill))
             away_goals = np.random.poisson(lam=np.exp(away_skill))
@@ -316,6 +316,49 @@ class LogLinear(object):
                         latent_vars={self.w1: self.qw1},
                         n_samples=1000)
         return stats1
+
+    def simulate(self, data, prior_loc=0, prior_scale=1):
+        team_num_map = self.team_num_map
+        m = len(data)
+        i = 0
+        matches = np.zeros((m, 2))
+        results = np.zeros(m)
+        for row in data.itertuples():
+            home = int(team_num_map.get(row.home_team, '-1'))
+            away = int(team_num_map.get(row.away_team, '-1'))
+            matches[i, 0] = home
+            matches[i, 1] = away
+            results[i] = row.home_team_goal - row.away_team_goal
+            i += 1
+
+        prediction = []
+        prior = np.random.normal(prior_loc, prior_scale)
+        for home, away in matches:
+            home = int(home)
+            away = int(away)
+            if home == -1:
+                home_skill = prior
+            else:
+                home_mu = self.team_skill[home]
+                home_scale = np.sqrt(-self.perf_variance[home])
+                home_skill = np.random.normal(home_mu, home_scale)
+            if away == -1:
+                away_skill = prior
+            else:
+                away_mu = self.team_skill[away]
+                away_scale = np.sqrt(-self.perf_variance[away])
+                away_skill = np.random.normal(away_mu, away_scale)
+            home_goals = np.random.poisson(lam=np.exp(home_skill))
+            away_goals = np.random.poisson(lam=np.exp(away_skill))
+            dif = round(home_goals - away_goals)
+            if dif > 0:
+                prediction.append(1)
+            elif dif < 0:
+                prediction.append(-1)
+            else:
+                prediction.append(0)
+
+        return prediction
 
 
 class LogLinearOffDef(object):
