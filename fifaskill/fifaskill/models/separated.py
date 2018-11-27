@@ -1,7 +1,7 @@
 import numpy as np
 import edward as ed
 import tensorflow as tf
-from edward.models import Normal
+from edward.models import Normal, Poisson
 from fifaskill.data_processing import process
 
 
@@ -21,25 +21,38 @@ class Toy(object):
         # Model based on Alek's toy model in Jupyter
         n = len(self.team_num_map.keys())
 
-        initial_loc = tf.zeros((n, 1), dtype='float32') 
-        initial_scale = tf.ones((n, 1),  dtype='float32') 
+        initial_loc = tf.ones((n, 1), dtype='float32') * 25
+        initial_scale = tf.ones((n, 1),  dtype='float32') * (25/3)**2
 
         with tf.name_scope('model'):
-            team_skill = Normal(loc=initial_loc, scale=initial_scale)
+            team_off = Normal(loc=initial_loc, scale=initial_scale)
+            team_def = Normal(loc=initial_loc, scale=initial_scale)
 
-            team_performance = Normal(loc=team_skill, scale=initial_scale)
+            team_off_performance = Normal(loc=team_off, scale=initial_scale)
+            team_def_performance = Normal(loc=team_off, scale=initial_scale)
 
-            perf_diff_tmp = tf.tile(tf.reduce_sum(team_performance, 1,
-                                keepdims=True),
-                                [1, n])
-            perf_diff = perf_diff_tmp - tf.transpose(perf_diff_tmp)
+            off_tile = tf.tile(tf.reduce_sum(
+                    team_off_performance, 1, keepdims=True), [1, n])
+            def_tile = tf.tile(tf.reduce_sum(
+                    team_def_performance, 1, keepdims=True), [1, n])
+            goals_scored_performance = off_tile - tf.transpose(def_tile)
+            goals_allowed_performance = def_tile - tf.transpose(off_tile)
+
+            goals_scored = Poisson(rate=goals_scored_performance)
+            goals_allowed = Poisson(rate=goals_allowed_performance)
+
+            perf_diff = goals_scored - goals_allowed
 
         with tf.name_scope('posterior'):
-            qz = Normal(loc=tf.get_variable("qz/loc", [n, 1]),
-                        scale=tf.nn.softplus(tf.get_variable("qz/scale",
-                                                             [n, 1])))
+            qoff = Normal(loc=tf.get_variable("qoff/loc", [n, 1]),
+                          scale=tf.nn.softplus(
+                              tf.get_variable("qoff/scale", [n, 1])))
+            qdef = Normal(loc=tf.get_variable("qdef/loc", [n, 1]),
+                          scale=tf.nn.softplus(
+                              tf.get_variable("qdef/scale", [n, 1])))
 
-        inference = ed.KLqp({team_skill: qz}, data={perf_diff: self.data})
+        inference = ed.KLqp({team_off: qoff, team_def: qdef},
+                            data={perf_diff: self.data*25})
         inference.initialize(optimizer=tf.train.AdamOptimizer
                              (learning_rate=0.001, beta1=0.9, beta2=0.999,
                               epsilon=1e-08),
@@ -56,17 +69,15 @@ class Toy(object):
         self._trained = True
 
         sess = ed.get_session()
-        self.team_skill = sess.run(qz)
-        self.tmp = sess.run(perf_diff, feed_dict={team_skill: self.team_skill})
-
+        self.team_off, self.team_def = sess.run([qoff, qdef])
         return
 
     def predict(self, team1, team2):
         if self._trained:
             home = self.team_num_map[team1]
             away = self.team_num_map[team2]
-            home_skill = self.team_skill[home]
-            away_skill = self.team_skill[away]
+            home_skill = self.team_off[home] - self.team_def[away]
+            away_skill = self.team_off[away] - self.team_def[home]
             return 1 if home_skill > away_skill else -1
         else:
             raise ValueError("Model not trained")
