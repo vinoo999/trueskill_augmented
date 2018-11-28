@@ -1,7 +1,7 @@
 import numpy as np
 import edward as ed
 import tensorflow as tf
-from edward.models import Normal, Poisson
+from edward.models import Normal, Poisson, PointMass
 from fifaskill.data_processing import process
 
 
@@ -97,7 +97,7 @@ class LinearRegressor(object):
 
 
 class TrueSkillRegressor(object):
-    def __init__(self, data=None, goal_dif=False, n_iter=1000):
+    def __init__(self, data=None, inf_type='Var', goal_dif=False, n_iter=1000):
         if data is None:
             raise ValueError("Data cannot be null")
 
@@ -106,6 +106,7 @@ class TrueSkillRegressor(object):
         self.xs = matches
         self.ys = results
         self.team_num_map = team_num_map
+        self.inf_type = inf_type
         self.train(n_iter=n_iter)
 
     def train(self, n_iter=1000):
@@ -117,13 +118,23 @@ class TrueSkillRegressor(object):
             self.y = Normal(loc=ed.dot(self.X, self.w), scale=tf.ones(N))
 
         with tf.name_scope('posterior'):
-            self.qw = Normal(loc=tf.get_variable("qw/loc", [D]),
-                             scale=tf.nn.softplus(tf.get_variable("qw/scale",
-                                                                  [D])))
+            if self.inf_type == 'Var':
+                self.qw = Normal(loc=tf.get_variable("qw/loc", [D]),
+                                 scale=tf.nn.softplus(
+                                     tf.get_variable("qw/scale", [D])))
+            elif self.inf_type == 'MAP':
+                self.qw = PointMass(
+                    Normal(loc=tf.get_variable("qw/loc", [D]),
+                           scale=tf.nn.softplus(
+                                   tf.get_variable("qw/scale", [D]))))
 
-        inference = ed.ReparameterizationKLqp({self.w: self.qw},
-                                              data={self.X: self.xs,
-                                                    self.y: self.ys})
+        if self.inf_type == 'Var':
+            inference = ed.ReparameterizationKLqp({self.w: self.qw},
+                                                  data={self.X: self.xs,
+                                                        self.y: self.ys})
+        elif self.inf_type == 'MAP':
+            inference = ed.MAP({self.w: self.qw}, data={self.X: self.xs,
+                                                        self.y: self.ys})
         inference.initialize(optimizer=tf.train.AdamOptimizer
                              (learning_rate=0.001, beta1=0.9, beta2=0.999,
                               epsilon=1e-08),
@@ -222,7 +233,7 @@ class TrueSkillRegressor(object):
 
 
 class LogLinear(object):
-    def __init__(self, data=None, goal_dif=False, n_iter=1000):
+    def __init__(self, data=None, inf_type='Var', goal_dif=False, n_iter=1000):
         if data is None:
             raise ValueError("Data cannot be null")
 
@@ -231,6 +242,7 @@ class LogLinear(object):
         self.xs = matches
         self.ys = np.exp(results)
         self.team_num_map = team_num_map
+        self.inf_type = 'Var'
         self.train(n_iter=n_iter)
 
     def train(self, n_iter=1000):
@@ -243,17 +255,29 @@ class LogLinear(object):
             self.y1 = Poisson(rate=tf.exp(ed.dot(self.X, self.w1)))
 
         with tf.name_scope('posterior'):
-            self.qw1 = Normal(loc=tf.get_variable("qw1_ll/loc", [D]),
-                              scale=tf.nn.softplus(tf.get_variable
-                                                   ("qw1_ll/scale",
-                                                    [D])))
-            # self.qb1 = Normal(loc=tf.get_variable("qb1/loc", [1]),
-            #                  scale=tf.nn.softplus(tf.get_variable("qb1/scale",
-            #                                                        [1])))
+            if self.inf_type == 'Var':
+                self.qw1 = Normal(loc=tf.get_variable("qw1_ll/loc", [D]),
+                                  scale=tf.nn.softplus(tf.get_variable
+                                                       ("qw1_ll/scale",
+                                                        [D])))
+                # self.qb1 = Normal(loc=tf.get_variable("qb1/loc", [1]),
+                #                  scale=tf.nn.softplus(tf.get_variable("qb1/scale",
+                #                                                        [1])))
+            elif self.inf_type == 'MAP':
+                self.qw1 = PointMass(
+                    Normal(loc=tf.get_variable("qw1_ll/loc", [D]),
+                           scale=tf.nn.softplus(tf.get_variable
+                                                ("qw1_ll/scale",
+                                                 [D]))))
 
-        inference = ed.ReparameterizationKLqp({self.w1: self.qw1},
-                                              data={self.X: self.xs,
-                                                    self.y1: self.ys})
+        if self.inf_type == 'Var':
+            inference = ed.ReparameterizationKLqp(
+                                                {self.w1: self.qw1},
+                                                data={self.X: self.xs,
+                                                      self.y1: self.ys})
+        elif self.inf_type == 'MAP':
+            inference = ed.MAP({self.w1: self.qw1},
+                               data={self.X: self.xs, self.y1: self.ys})
         inference.initialize(optimizer=tf.train.AdamOptimizer
                              (learning_rate=0.001, beta1=0.9, beta2=0.999,
                               epsilon=1e-08),
@@ -361,7 +385,7 @@ class LogLinear(object):
 
 
 class LogLinearOffDef(object):
-    def __init__(self, data=None, goal_dif=False, n_iter=1000):
+    def __init__(self, data=None, inf_type='Var', goal_dif=False, n_iter=1000):
         if data is None:
             raise ValueError("Data cannot be null")
 
@@ -372,6 +396,7 @@ class LogLinearOffDef(object):
         self.xs2 = matches[:, :, 1]
         self.ys = results
         self.team_num_map = team_num_map
+        self.inf_type = inf_type
         self.train(n_iter=n_iter)
 
     def train(self, n_iter=1000):
@@ -392,31 +417,63 @@ class LogLinearOffDef(object):
                                     ed.dot(self.X1, self.w1) - self.b1)))
 
         with tf.name_scope('posterior'):
-            self.qw1 = Normal(loc=tf.get_variable("qw1_llod/loc", [D]),
-                              scale=tf.nn.softplus(tf.get_variable
-                                                   ("qw1_llod/scale",
-                                                    [D])))
-            self.qb1 = Normal(loc=tf.get_variable("qb1_llod/loc", [1]),
-                              scale=tf.nn.softplus(tf.get_variable
-                                                   ("qb1_llod/scale",
-                                                    [1])))
-            self.qw2 = Normal(loc=tf.get_variable("qw2_llod/loc", [D]),
-                              scale=tf.nn.softplus(tf.get_variable
-                                                   ("qw2_llod/scale",
-                                                    [D])))
-            self.qb2 = Normal(loc=tf.get_variable("qb2_llod/loc", [1]),
-                              scale=tf.nn.softplus(tf.get_variable
-                                                   ("qb2_llod/scale",
-                                                    [1])))
-
-        inference = ed.ReparameterizationKLqp({self.w1: self.qw1,
-                                               self.b1: self.qb1,
-                                               self.w2: self.qw2,
-                                               self.b2: self.qb2},
-                                              data={self.X1: self.xs1,
-                                                    self.X2: self.xs2,
-                                                    self.y1: self.ys[:, 0],
-                                                    self.y2: self.ys[:, 1]})
+            if self.inf_type == 'Var':
+                self.qw1 = Normal(loc=tf.get_variable("qw1_llod/loc", [D]),
+                                  scale=tf.nn.softplus(tf.get_variable
+                                                       ("qw1_llod/scale",
+                                                        [D])))
+                self.qb1 = Normal(loc=tf.get_variable("qb1_llod/loc", [1]),
+                                  scale=tf.nn.softplus(tf.get_variable
+                                                       ("qb1_llod/scale",
+                                                        [1])))
+                self.qw2 = Normal(loc=tf.get_variable("qw2_llod/loc", [D]),
+                                  scale=tf.nn.softplus(tf.get_variable
+                                                       ("qw2_llod/scale",
+                                                        [D])))
+                self.qb2 = Normal(loc=tf.get_variable("qb2_llod/loc", [1]),
+                                  scale=tf.nn.softplus(tf.get_variable
+                                                       ("qb2_llod/scale",
+                                                        [1])))
+            elif self.inf_type == 'MAP':
+                self.qw1 = PointMass(
+                            Normal(loc=tf.get_variable("qw1_llod/loc", [D]),
+                                   scale=tf.nn.softplus(tf.get_variable
+                                                        ("qw1_llod/scale",
+                                                         [D]))))
+                self.qb1 = PointMass(
+                            Normal(loc=tf.get_variable("qb1_llod/loc", [1]),
+                                   scale=tf.nn.softplus(tf.get_variable
+                                                        ("qb1_llod/scale",
+                                                         [1]))))
+                self.qw2 = PointMass(
+                    Normal(loc=tf.get_variable("qw2_llod/loc", [D]),
+                           scale=tf.nn.softplus(tf.get_variable
+                                                ("qw2_llod/scale",
+                                                 [D]))))
+                self.qb2 = PointMass(
+                            Normal(loc=tf.get_variable("qb2_llod/loc", [1]),
+                                   scale=tf.nn.softplus(tf.get_variable
+                                                        ("qb2_llod/scale",
+                                                         [1]))))
+        if self.inf_type == 'Var':
+            inference = ed.ReparameterizationKLqp(
+                              {self.w1: self.qw1,
+                               self.b1: self.qb1,
+                               self.w2: self.qw2,
+                               self.b2: self.qb2},
+                              data={self.X1: self.xs1,
+                                    self.X2: self.xs2,
+                                    self.y1: self.ys[:, 0],
+                                    self.y2: self.ys[:, 1]})
+        elif self.inf_type == 'MAP':
+            inference = ed.MAP({self.w1: self.qw1,
+                               self.b1: self.qb1,
+                               self.w2: self.qw2,
+                               self.b2: self.qb2},
+                               data={self.X1: self.xs1,
+                                     self.X2: self.xs2,
+                                     self.y1: self.ys[:, 0],
+                                     self.y2: self.ys[:, 1]})
         inference.initialize(optimizer=tf.train.AdamOptimizer
                              (learning_rate=0.001, beta1=0.9, beta2=0.999,
                               epsilon=1e-08),
