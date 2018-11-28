@@ -179,50 +179,46 @@ class TrueSkillRegressor(object):
                        n_samples=1000)
         return stats[0]
 
-    def simulate(self, data, num_simulations=5, prior_loc=25, prior_scale=25/3):
-        team_num_map = self.team_num_map
-        m = len(data)
-        i = 0
-        matches = np.zeros((m, 2))
-        results = np.zeros(m)
+    def sample(self, team1, team2, prior_loc=0, prior_scale=1):
+        if team1 not in self.team_num_map.keys():
+            team1_skill = prior_loc
+            team1_var = prior_scale**2
+        else:
+            team1_skill = self.team_skill[self.team_num_map[team1]]
+            team1_var = self.perf_variance[self.team_num_map[team1]]**2
+        
+        if team2 not in self.team_num_map.keys():
+            team2_skill = prior_loc
+            team2_var = prior_scale**2
+        else:
+            team2_skill = self.team_skill[self.team_num_map[team2]]
+            team2_var = self.perf_variance[self.team_num_map[team2]]**2
+        
+        team1_skill = np.random.normal(team1_skill, np.sqrt(team1_var))
+        team2_skill = np.random.normal(team2_skill, np.sqrt(team2_var))
+
+        dif = np.random.normal(loc=team1_skill - team2_skill, scale=1)
+        dif = round(dif)
+        if dif > 0:
+            return 1
+        elif dif < 0:
+            return -1
+        else:
+            return 0
+
+    def simulate(self, data, num_simulations = 5, prior_loc=25,
+                 prior_scale=25/3):
+        results = []
         for row in data.itertuples():
-            home = int(team_num_map.get(row.home_team, '-1'))
-            away = int(team_num_map.get(row.away_team, '-1'))
-            matches[i, 0] = home
-            matches[i, 1] = away
-            results[i] = row.home_team_goal - row.away_team_goal
-            i += 1
-        full_simulation = np.zeros(m)
-        for s in range(num_simulations):
-            prediction = []
-            prior = np.random.normal(prior_loc, prior_scale)
-            for home, away in matches:
-                home = int(home)
-                away = int(away)
-                if home == -1:
-                    home_skill = prior
-                else:
-                    home_mu = self.team_skill[home]
-                    home_scale = np.sqrt(-self.perf_variance[home])
-                    home_skill = np.random.normal(home_mu, home_scale)
-                if away == -1:
-                    away_skill = prior
-                else:
-                    away_mu = self.team_skill[away]
-                    away_scale = np.sqrt(-self.perf_variance[away])
-                    away_skill = np.random.normal(away_mu, away_scale)
-                dif = round(home_skill - away_skill)
-                if dif > 0:
-                    prediction.append(1)
-                elif dif < 0:
-                    prediction.append(-1)
-                else:
-                    prediction.append(0)
-
-            full_simulation += np.array(prediction) / num_simulations
-
-        return full_simulation
-
+            sims = np.zeros(3)
+            for _ in range(num_simulations):
+                res = self.sample(row.home_team, row.away_team, 
+                                  prior_loc=prior_loc, prior_scale=prior_scale)
+                sims[res+1] += 1
+            
+            results.append(np.argmax(sims)-1)
+            
+        return np.array(results)
 
 class LogLinear(object):
     def __init__(self, data=None, goal_dif=False, n_iter=1000):
@@ -320,50 +316,47 @@ class LogLinear(object):
                         n_samples=1000)
         return stats1
 
-    def simulate(self, data, num_simulations = 5, prior_loc=0, prior_scale=1):
-        team_num_map = self.team_num_map
-        m = len(data)
-        i = 0
-        matches = np.zeros((m, 2))
-        results = np.zeros(m)
-        for row in data.itertuples():
-            home = int(team_num_map.get(row.home_team, '-1'))
-            away = int(team_num_map.get(row.away_team, '-1'))
-            matches[i, 0] = home
-            matches[i, 1] = away
-            results[i] = row.home_team_goal - row.away_team_goal
-            i += 1
-        full_simulation = np.zeros(m)
-        for s in range(num_simulations):
-            prediction = []
-            prior = np.random.normal(prior_loc, prior_scale)
-            for home, away in matches:
-                home = int(home)
-                away = int(away)
-                if home == -1:
-                    home_skill = prior
-                else:
-                    home_mu = self.team_skill[home]
-                    home_scale = np.sqrt(-self.perf_variance[home])
-                    home_skill = np.random.normal(home_mu, home_scale)
-                if away == -1:
-                    away_skill = prior
-                else:
-                    away_mu = self.team_skill[away]
-                    away_scale = np.sqrt(-self.perf_variance[away])
-                    away_skill = np.random.normal(away_mu, away_scale)
-                home_goals = np.random.poisson(lam=np.exp(home_skill))
-                away_goals = np.random.poisson(lam=np.exp(away_skill))
-                dif = round(home_goals - away_goals)
-                if dif > 0:
-                    prediction.append(1)
-                elif dif < 0:
-                    prediction.append(-1)
-                else:
-                    prediction.append(0)
-            full_simulation += np.array(prediction) / num_simulations
+    def sample(self, team1, team2, prior_loc=0, prior_scale=1):
+        if team1 not in self.team_num_map.keys():
+            team1_skill = prior_loc
+            team1_var = prior_scale**2
+        else:
+            team1_skill = self.team_skill[self.team_num_map[team1]]
+            team1_var = self.perf_variance[self.team_num_map[team1]]**2
+        
+        if team2 not in self.team_num_map.keys():
+            team2_skill = prior_loc
+            team2_var = prior_scale**2
+        else:
+            team2_skill = self.team_skill[self.team_num_map[team2]]
+            team2_var = self.perf_variance[self.team_num_map[team2]]**2
+        
+        team1_skill = np.random.normal(team1_skill, np.sqrt(team1_var))
+        team2_skill = np.random.normal(team2_skill, np.sqrt(team2_var))
 
-        return full_simulation
+        team1_goals = np.random.poisson(lam=np.exp(team1_skill))
+        team2_goals = np.random.poisson(lam=np.exp(team2_skill))
+
+        dif = round(team1_goals - team2_goals)
+        if dif > 0:
+            return 1
+        elif dif < 0:
+            return -1
+        else:
+            return 0
+
+    def simulate(self, data, num_simulations = 5, prior_loc=0, prior_scale=1):
+        results = []
+        for row in data.itertuples():
+            sims = np.zeros(3)
+            for _ in range(num_simulations):
+                res = self.sample(row.home_team, row.away_team, 
+                                  prior_loc=prior_loc, prior_scale=prior_scale)
+                sims[res+1] += 1
+            
+            results.append(np.argmax(sims)-1)
+            
+        return np.array(results)
 
 
 class LogLinearOffDef(object):
@@ -457,7 +450,6 @@ class LogLinearOffDef(object):
             home_goals = np.random.poisson(lam=np.exp(home_skill))
             away_goals = np.random.poisson(lam=np.exp(away_skill))
             dif = home_goals - away_goals
-            print(home_goals, away_goals)
             if dif >= 1:
                 return 1
             elif dif <= -1:
@@ -487,73 +479,67 @@ class LogLinearOffDef(object):
 
             def T2(ys, xs): return tf.reduce_mean(self.y_post[1])
 
-        stats1 = ed.ppc(T1, data={self.X: self.xs,
+        stats1 = ed.ppc(T1, data={self.X1: self.xs1, self.X2: self.xs2,
                                   self.y_post[0]: self.ys[:, 0]},
                         latent_vars={self.w1: self.qw1, self.b1: self.qb1},
                         n_samples=1000)
-        stats2 = ed.ppc(T2, data={self.X: self.xs,
+        stats2 = ed.ppc(T2, data={self.X1: self.xs1, self.X2: self.xs2,
                                   self.y_post[1]: self.ys[:, 1]},
                         latent_vars={self.w2: self.qw2, self.b2: self.qb2},
                         n_samples=1000)
         return (stats1[0], stats2[0])
 
+    def sample(self, team1, team2, prior_loc=0, prior_scale=1):
+        if team1 not in self.team_num_map.keys():
+            team1_off_skill = prior_loc
+            team1_off_var = prior_scale**2
+            team1_def_skill = prior_loc
+            team1_def_var = prior_scale**2
+        else:
+            team1_off_skill = self.team_skill[0][self.team_num_map[team1]]
+            team1_off_var = self.perf_var[0][self.team_num_map[team1]]**2
+            team1_def_skill = self.team_skill[1][self.team_num_map[team1]]
+            team1_def_var = self.perf_var[1][self.team_num_map[team1]]**2
+        
+        if team2 not in self.team_num_map.keys():
+            team2_off_skill = prior_loc
+            team2_off_var = prior_scale**2
+            team2_def_skill = prior_loc
+            team2_def_var = prior_scale**2
+        else:
+            team2_off_skill = self.team_skill[0][self.team_num_map[team2]]
+            team2_off_var = self.perf_var[0][self.team_num_map[team2]]**2
+            team2_def_skill = self.team_skill[1][self.team_num_map[team2]]
+            team2_def_var = self.perf_var[1][self.team_num_map[team2]]**2
+
+        team1_off = np.random.normal(team1_off_skill, np.sqrt(team1_off_var))
+        team2_off = np.random.normal(team2_off_skill, np.sqrt(team2_off_var))
+        team1_def = np.random.normal(team1_def_skill, np.sqrt(team1_def_var))
+        team2_def = np.random.normal(team2_def_skill, np.sqrt(team2_def_var))
+
+        team1_skill = team1_off - team2_def
+        team2_skill = team2_off - team1_def
+        
+        team1_goals = np.random.poisson(lam=np.exp(team1_skill))
+        team2_goals = np.random.poisson(lam=np.exp(team2_skill))
+
+        dif = round(team1_goals - team2_goals)
+        if dif > 0:
+            return 1
+        elif dif < 0:
+            return -1
+        else:
+            return 0
+
     def simulate(self, data, num_simulations = 5, prior_loc=0, prior_scale=1):
-        team_num_map = self.team_num_map
-        m = len(data)
-        i = 0
-        matches = np.zeros((m, 2))
-        results = np.zeros(m)
+        results = []
         for row in data.itertuples():
-            home = int(team_num_map.get(row.home_team, '-1'))
-            away = int(team_num_map.get(row.away_team, '-1'))
-            matches[i, 0] = home
-            matches[i, 1] = away
-            results[i] = row.home_team_goal - row.away_team_goal
-            i += 1
-        full_simulation = np.zeros(m)
-        for s in range(num_simulations):
-            prediction = []
-            prior = np.random.normal(prior_loc, prior_scale)
-            for home, away in matches:
-                home = int(home)
-                away = int(away)
-                if home == -1:
-                    home_off = prior
-                    home_def = prior
-                else:
-                    home_off_mu = self.team_skill[0][home]
-                    home_off_scale = np.sqrt(-self.perf_var[0][home])
-                    home_off = np.random.normal(home_off_mu, home_off_scale)
-
-                    home_def_mu = self.team_skill[1][home]
-                    home_def_scale = np.sqrt(-self.perf_var[1][home])
-                    home_def = np.random.normal(home_def_mu, home_def_scale)
-
-                if away == -1:
-                    away_off = prior
-                    away_def = prior
-                else:
-                    away_off_mu = self.team_skill[0][away]
-                    away_off_scale = np.sqrt(-self.perf_var[0][away])
-                    away_off = np.random.normal(away_off_mu, away_off_scale)
-
-                    away_def_mu = self.team_skill[1][home]
-                    away_def_scale = np.sqrt(-self.perf_var[1][away])
-                    away_def = np.random.normal(away_def_mu, away_def_scale)
-
-                home_skill = home_off - away_def
-                away_skill = away_off - home_def
-
-                home_goals = np.random.poisson(lam=np.exp(home_skill))
-                away_goals = np.random.poisson(lam=np.exp(away_skill))
-                dif = round(home_goals - away_goals)
-                if dif > 0:
-                    prediction.append(1)
-                elif dif < 0:
-                    prediction.append(-1)
-                else:
-                    prediction.append(0)
-            full_simulation += np.array(prediction) / num_simulations
-
-        return full_simulation
-
+            sims = np.zeros(3)
+            for _ in range(num_simulations):
+                res = self.sample(row.home_team, row.away_team, 
+                                  prior_loc=prior_loc, prior_scale=prior_scale)
+                sims[res+1] += 1
+            
+            results.append(np.argmax(sims)-1)
+            
+        return np.array(results)

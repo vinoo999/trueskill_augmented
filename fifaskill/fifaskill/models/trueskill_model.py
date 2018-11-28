@@ -111,8 +111,15 @@ class TrueskillModel(object):
         return outputs
 
     def sample(self, team1, team2):
-        rating1 = self.team_ratings[team1]
-        rating2 = self.team_ratings[team2]
+        if team1 not in self.team_ratings.keys():
+            rating1 = Rating()
+        else:
+            rating1 = self.team_ratings[team1]
+        
+        if team2 not in self.team_ratings.keys():
+            rating2 = Rating()
+        else:
+            rating2 = self.team_ratings[team2]
 
         performance1 = np.random.normal(loc=rating1.mu, scale=rating1.sigma)
         performance2 = np.random.normal(loc=rating2.mu, scale=rating2.sigma)
@@ -130,10 +137,10 @@ class TrueskillModel(object):
         results = []
         for row in data.itertuples():
             sims = np.zeros(3)
-            for i in range(num_simulations):
+            for _ in range(num_simulations):
                 res = self.sample(row.home_team, row.away_team)
                 sims[res+1] += 1
             
             results.append(np.argmax(sims)-1)
             
-        return results
+        return np.array(results)
