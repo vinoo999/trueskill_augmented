@@ -218,7 +218,7 @@ class TrueSkillRegressor(object):
             return 0
 
     def simulate(self, data, num_simulations=5, prior_loc=25,
-                 prior_scale=25/3):
+                 prior_scale=25/3, probs=False):
         results = []
         for row in data.itertuples():
             sims = np.zeros(3)
@@ -227,7 +227,12 @@ class TrueSkillRegressor(object):
                                   prior_loc=prior_loc, prior_scale=prior_scale)
                 sims[res+1] += 1
 
-            results.append(np.argmax(sims)-1)
+            if probs:
+                total = np.sum(sims)
+                prob_out = (sims[2] - sims[0]) / total
+                results.append(prob_out)
+            else:
+                results.append(np.argmax(sims)-1)
 
         return np.array(results)
 
@@ -370,7 +375,8 @@ class LogLinear(object):
         else:
             return 0
 
-    def simulate(self, data, num_simulations=5, prior_loc=0, prior_scale=1):
+    def simulate(self, data, num_simulations=5,
+                 prior_loc=0, prior_scale=1, probs=False):
         results = []
         for row in data.itertuples():
             sims = np.zeros(3)
@@ -379,7 +385,12 @@ class LogLinear(object):
                                   prior_loc=prior_loc, prior_scale=prior_scale)
                 sims[res+1] += 1
 
-            results.append(np.argmax(sims)-1)
+            if probs:
+                total = np.sum(sims)
+                prob_out = (sims[2] - sims[0]) / total
+                results.append(prob_out)
+            else:
+                results.append(np.argmax(sims)-1)
 
         return np.array(results)
 
@@ -594,7 +605,8 @@ class LogLinearOffDef(object):
         else:
             return 0
 
-    def simulate(self, data, num_simulations=5, prior_loc=0, prior_scale=1):
+    def simulate(self, data, num_simulations=5,
+                 prior_loc=0, prior_scale=1, probs=False):
         results = []
         for row in data.itertuples():
             sims = np.zeros(3)
@@ -602,7 +614,11 @@ class LogLinearOffDef(object):
                 res = self.sample(row.home_team, row.away_team,
                                   prior_loc=prior_loc, prior_scale=prior_scale)
                 sims[res+1] += 1
-
-            results.append(np.argmax(sims)-1)
+            if probs:
+                total = np.sum(sims)
+                prob_out = (sims[2] - sims[0]) / total
+                results.append(prob_out)
+            else:
+                results.append(np.argmax(sims)-1)
 
         return np.array(results)

@@ -133,7 +133,8 @@ class TrueskillModel(object):
 
         return
 
-    def simulate(self, data, num_simulations=5, prior_loc=0, prior_scale=1):
+    def simulate(self, data, num_simulations=5,
+                 prior_loc=0, prior_scale=1, probs=False):
         results = []
         for row in data.itertuples():
             sims = np.zeros(3)
@@ -141,6 +142,11 @@ class TrueskillModel(object):
                 res = self.sample(row.home_team, row.away_team)
                 sims[res+1] += 1
 
-            results.append(np.argmax(sims)-1)
+            if probs:
+                total = np.sum(sims)
+                prob_out = (sims[2] - sims[0]) / total
+                results.append(prob_out)
+            else:
+                results.append(np.argmax(sims)-1)
 
         return np.array(results)
