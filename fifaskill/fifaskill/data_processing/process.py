@@ -226,7 +226,7 @@ def gen_records(data, match_predictions):
     return pd.DataFrame(data_dict).sort_values(by=['points'])
 
 
-def accuracy(data, match_predictions, probs=True):
+def accuracy(data, match_predictions, probs=False):
     correct = 0.0
     incorrect = 0.0
     squared_errors = 0
