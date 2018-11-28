@@ -115,7 +115,7 @@ class TrueskillModel(object):
             rating1 = Rating()
         else:
             rating1 = self.team_ratings[team1]
-        
+
         if team2 not in self.team_ratings.keys():
             rating2 = Rating()
         else:
@@ -131,16 +131,16 @@ class TrueskillModel(object):
         else:
             return 0
 
-        return 
+        return
 
-    def simulate(self, data, num_simulations = 5, prior_loc=0, prior_scale=1):
+    def simulate(self, data, num_simulations=5, prior_loc=0, prior_scale=1):
         results = []
         for row in data.itertuples():
             sims = np.zeros(3)
             for _ in range(num_simulations):
                 res = self.sample(row.home_team, row.away_team)
                 sims[res+1] += 1
-            
+
             results.append(np.argmax(sims)-1)
-            
+
         return np.array(results)

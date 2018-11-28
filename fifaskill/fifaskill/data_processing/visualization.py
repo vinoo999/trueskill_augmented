@@ -21,11 +21,11 @@ def plot_ppcs(*models, log_plot=False):
         if type(ppc) is tuple:
             _, axes = plt.subplots(4, 1, sharex=True)
             if log_plot:
-                min_val = np.min([np.min(ppc[0]), np.min(ppc[1]), 
-                                  np.min(model.ys[:, 0]), 
+                min_val = np.min([np.min(ppc[0]), np.min(ppc[1]),
+                                  np.min(model.ys[:, 0]),
                                   np.min(model.ys[:, 0])])
-                max_val = np.max([np.max(ppc[0]), np.max(ppc[1]), 
-                                  np.max(model.ys[:, 0]), 
+                max_val = np.max([np.max(ppc[0]), np.max(ppc[1]),
+                                  np.max(model.ys[:, 0]),
                                   np.max(model.ys[:, 0])])
                 logbins = np.geomspace(min_val, max_val, 8)
                 axes[0].hist(ppc[0], bins=logbins)

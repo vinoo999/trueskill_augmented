@@ -186,14 +186,14 @@ class TrueSkillRegressor(object):
         else:
             team1_skill = self.team_skill[self.team_num_map[team1]]
             team1_var = self.perf_variance[self.team_num_map[team1]]**2
-        
+
         if team2 not in self.team_num_map.keys():
             team2_skill = prior_loc
             team2_var = prior_scale**2
         else:
             team2_skill = self.team_skill[self.team_num_map[team2]]
             team2_var = self.perf_variance[self.team_num_map[team2]]**2
-        
+
         team1_skill = np.random.normal(team1_skill, np.sqrt(team1_var))
         team2_skill = np.random.normal(team2_skill, np.sqrt(team2_var))
 
@@ -206,19 +206,20 @@ class TrueSkillRegressor(object):
         else:
             return 0
 
-    def simulate(self, data, num_simulations = 5, prior_loc=25,
+    def simulate(self, data, num_simulations=5, prior_loc=25,
                  prior_scale=25/3):
         results = []
         for row in data.itertuples():
             sims = np.zeros(3)
             for _ in range(num_simulations):
-                res = self.sample(row.home_team, row.away_team, 
+                res = self.sample(row.home_team, row.away_team,
                                   prior_loc=prior_loc, prior_scale=prior_scale)
                 sims[res+1] += 1
-            
+
             results.append(np.argmax(sims)-1)
-            
+
         return np.array(results)
+
 
 class LogLinear(object):
     def __init__(self, data=None, goal_dif=False, n_iter=1000):
@@ -323,14 +324,14 @@ class LogLinear(object):
         else:
             team1_skill = self.team_skill[self.team_num_map[team1]]
             team1_var = self.perf_variance[self.team_num_map[team1]]**2
-        
+
         if team2 not in self.team_num_map.keys():
             team2_skill = prior_loc
             team2_var = prior_scale**2
         else:
             team2_skill = self.team_skill[self.team_num_map[team2]]
             team2_var = self.perf_variance[self.team_num_map[team2]]**2
-        
+
         team1_skill = np.random.normal(team1_skill, np.sqrt(team1_var))
         team2_skill = np.random.normal(team2_skill, np.sqrt(team2_var))
 
@@ -345,17 +346,17 @@ class LogLinear(object):
         else:
             return 0
 
-    def simulate(self, data, num_simulations = 5, prior_loc=0, prior_scale=1):
+    def simulate(self, data, num_simulations=5, prior_loc=0, prior_scale=1):
         results = []
         for row in data.itertuples():
             sims = np.zeros(3)
             for _ in range(num_simulations):
-                res = self.sample(row.home_team, row.away_team, 
+                res = self.sample(row.home_team, row.away_team,
                                   prior_loc=prior_loc, prior_scale=prior_scale)
                 sims[res+1] += 1
-            
+
             results.append(np.argmax(sims)-1)
-            
+
         return np.array(results)
 
 
@@ -365,9 +366,10 @@ class LogLinearOffDef(object):
             raise ValueError("Data cannot be null")
 
         self._trained = False
-        matches, results, team_num_map = process.match_vectors(data,goals=True,seperate=True)
-        self.xs1 = matches[:,:,0]
-        self.xs2 = matches[:,:,1]
+        all_vectors = process.match_vectors(data, goals=True, seperate=True)
+        matches, results, team_num_map = all_vectors
+        self.xs1 = matches[:, :, 0]
+        self.xs2 = matches[:, :, 1]
         self.ys = results
         self.team_num_map = team_num_map
         self.train(n_iter=n_iter)
@@ -382,8 +384,12 @@ class LogLinearOffDef(object):
             self.b1 = Normal(loc=tf.zeros(1), scale=tf.ones(1))
             self.w2 = Normal(loc=tf.zeros(D), scale=tf.ones(D))
             self.b2 = Normal(loc=tf.zeros(1), scale=tf.ones(1))
-            self.y1 = Poisson(rate=tf.exp((ed.dot(self.X1, self.w1) + self.b1 - ed.dot(self.X2, self.w2) - self.b2)))
-            self.y2 = Poisson(rate=tf.exp((ed.dot(self.X2, self.w2) + self.b2 - ed.dot(self.X1, self.w1) - self.b1)))
+            self.y1 = Poisson(rate=tf.exp((
+                                    ed.dot(self.X1, self.w1) + self.b1 -
+                                    ed.dot(self.X2, self.w2) - self.b2)))
+            self.y2 = Poisson(rate=tf.exp((
+                                    ed.dot(self.X2, self.w2) + self.b2 -
+                                    ed.dot(self.X1, self.w1) - self.b1)))
 
         with tf.name_scope('posterior'):
             self.qw1 = Normal(loc=tf.get_variable("qw1_llod/loc", [D]),
@@ -500,7 +506,7 @@ class LogLinearOffDef(object):
             team1_off_var = self.perf_var[0][self.team_num_map[team1]]**2
             team1_def_skill = self.team_skill[1][self.team_num_map[team1]]
             team1_def_var = self.perf_var[1][self.team_num_map[team1]]**2
-        
+
         if team2 not in self.team_num_map.keys():
             team2_off_skill = prior_loc
             team2_off_var = prior_scale**2
@@ -519,7 +525,7 @@ class LogLinearOffDef(object):
 
         team1_skill = team1_off - team2_def
         team2_skill = team2_off - team1_def
-        
+
         team1_goals = np.random.poisson(lam=np.exp(team1_skill))
         team2_goals = np.random.poisson(lam=np.exp(team2_skill))
 
@@ -531,15 +537,15 @@ class LogLinearOffDef(object):
         else:
             return 0
 
-    def simulate(self, data, num_simulations = 5, prior_loc=0, prior_scale=1):
+    def simulate(self, data, num_simulations=5, prior_loc=0, prior_scale=1):
         results = []
         for row in data.itertuples():
             sims = np.zeros(3)
             for _ in range(num_simulations):
-                res = self.sample(row.home_team, row.away_team, 
+                res = self.sample(row.home_team, row.away_team,
                                   prior_loc=prior_loc, prior_scale=prior_scale)
                 sims[res+1] += 1
-            
+
             results.append(np.argmax(sims)-1)
-            
+
         return np.array(results)
