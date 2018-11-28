@@ -226,18 +226,25 @@ def gen_records(data, match_predictions):
     return pd.DataFrame(data_dict).sort_values(by=['points'])
 
 
-def accuracy(data, match_predictions):
+def accuracy(data, match_predictions, probs=True):
     correct = 0.0
     incorrect = 0.0
+    squared_errors = 0
 
     for i, row in data.iterrows():
         res = match_predictions[i]
         dif = row.home_team_goal - row.away_team_goal
-
-        if (res > 0 and dif > 0) or (res == 0 and dif == 0) or \
-                (res < 0 and dif < 0):
-            correct += 1.0
+        if probs:
+            if dif:
+                dif /= abs(dif)
+            squared_errors += (res - dif) ** 2
         else:
-            incorrect += 1.0
-
-    return correct / (correct + incorrect)
+            if (res > 0 and dif > 0) or (res == 0 and dif == 0) or \
+                    (res < 0 and dif < 0):
+                correct += 1.0
+            else:
+                incorrect += 1.0
+    if probs:
+        return squared_errors / len(data)
+    else:
+        return correct / (correct + incorrect)
